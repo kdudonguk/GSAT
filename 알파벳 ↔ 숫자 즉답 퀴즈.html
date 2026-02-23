@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>알파벳 ↔ 숫자 즉답 퀴즈</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121a2e;
+      --ink: #e6ecff;
+      --muted: #9fb0ff;
+      --accent: #7aa2ff;
+      --bad: #ff6b6b;
+      --good: #6bffb0;
+      --warn: #ffd166;
+      --border: #24304f;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Apple SD Gothic Neo, Noto Sans KR, "맑은 고딕", sans-serif;
+      color: var(--ink); background: radial-gradient(1200px 800px at 70% -10%, #1b2a57 0%, var(--bg) 60%);
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .title { font-size: clamp(22px, 3.4vw, 36px); font-weight: 800; letter-spacing: -0.4px; }
+    .subtitle { color: var(--muted); margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 860px) { .grid { grid-template-columns: 1.1fr 0.9fr; } }
+    .card { background: linear-gradient(180deg, rgba(18,26,46,0.8), rgba(18,26,46,0.92)); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    label { font-size: 14px; color: var(--muted); }
+    select, input[type="number"], input[type="text"] { width: 100%; background: #0e1428; border: 1px solid var(--border); color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 16px; }
+    input[type="checkbox"] { width: 18px; height: 18px; }
+    .btn { cursor: pointer; appearance: none; background: var(--accent); color: #061133; border: none; padding: 12px 16px; border-radius: 12px; font-weight: 700; font-size: 16px; transition: transform .05s ease, filter .2s ease; }
+    .btn:active { transform: translateY(1px); }
+    .btn.secondary { background: transparent; color: var(--ink); border: 1px solid var(--border); }
+    .btn.warn { background: var(--warn); color: #2b2200; }
+    .stat {
+      display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-top: 8px;
+    }
+    .kpi { background: #0d1530; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .kpi .v { font-size: 22px; font-weight: 800; }
+    .kpi .k { font-size: 12px; letter-spacing: .2px; color: var(--muted); margin-top: 6px; }
+    .prompt {
+      font-size: clamp(42px, 9vw, 88px); font-weight: 900; text-align: center; letter-spacing: 2px;
+      padding: 14px 8px; border-radius: 16px; border: 1px dashed var(--border); background: #0a1228; margin-top: 10px;
+    }
+    .answerline { display: grid; grid-template-columns: 1fr 120px; gap: 12px; margin-top: 12px; }
+    .feedback { min-height: 28px; margin-top: 8px; font-weight: 700; }
+    .ok { color: var(--good); }
+    .bad { color: var(--bad); }
+    .list { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .footer { margin-top: 24px; opacity: .7; font-size: 12px; }
+    .small { font-size: 12px; color: var(--muted); }
+    .chip { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius: 999px; background:#0e1733; border:1px solid var(--border); font-size:12px; }
+    .center { text-align:center; }
+    .hidden { display: none; }
+    .anchor { color: var(--muted); font-size: 14px; text-align: center; margin-top: 4px; }
+    .section-title { font-weight: 800; letter-spacing: .2px; margin-bottom: 6px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">알파벳 ↔ 숫자 즉답 퀴즈</div>
+    <div class="subtitle">A↔1, B↔2 … Z↔26 매핑을 반사적으로 떠올리는 훈련 도구다.</div>
+
+    <div class="grid" style="margin-top:18px;">
+      <div class="card" id="left">
+        <div class="section-title">설정</div>
+        <div class="row">
+          <div style="flex:1; min-width: 180px;">
+            <label>모드</label>
+            <select id="mode">
+              <option value="mixed">혼합 (a↔n)</option>
+              <option value="a2n">알파벳→숫자 (A→1)</option>
+              <option value="n2a">숫자→알파벳 (1→A)</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width: 160px;">
+            <label>문제 개수 <span class="small">(타임어택과 동시 설정 불가)</span></label>
+            <input id="count" type="number" min="1" max="200" value="30" />
+          </div>
+          <div style="flex:1; min-width: 160px;">
+            <label>타임어택 (초) <span class="small">(문제 개수와 동시 설정 불가)</span></label>
+            <input id="seconds" type="number" min="10" max="600" placeholder="예: 60" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <label class="chip"><input id="hard" type="checkbox" style="margin-right:6px;"/> 난이도 상(오답/느린 항목 가중)</label>
+          <label class="chip"><input id="anchors" type="checkbox" style="margin-right:6px;"/> 앵커 힌트(A=1, M=13, Z=26)</label>
+          <label class="chip">느린 응답 기준 <input id="slow" type="number" step="0.1" value="1.0" style="width:72px; margin-left:6px;"/> s</label>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="startBtn">시작</button>
+          <button class="btn secondary" id="stopBtn" disabled>중지</button>
+          <button class="btn secondary" id="exportBtn">통계 내보내기</button>
+          <button class="btn warn" id="resetBtn">통계 초기화</button>
+        </div>
+
+        <div class="stat">
+          <div class="kpi"><div class="v" id="k_total">0</div><div class="k">총 문제</div></div>
+          <div class="kpi"><div class="v" id="k_acc">0%</div><div class="k">정확도</div></div>
+          <div class="kpi"><div class="v" id="k_avg">0.00s</div><div class="k">평균 속도</div></div>
+          <div class="kpi"><div class="v" id="k_best">0.00s</div><div class="k">최단/최장</div></div>
+        </div>
+
+        <div class="prompt" id="prompt">READY</div>
+        <div class="anchor" id="anchorHint"></div>
+
+        <div class="answerline">
+          <input id="answer" type="text" placeholder="정답 입력 후 Enter" autocomplete="off" />
+          <button class="btn" id="submitBtn">제출</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="card" id="right">
+        <div class="section-title">오답 노트</div>
+        <div class="list" id="wrongList">아직 없음</div>
+        <div class="section-title" style="margin-top:16px;">느린 응답 TOP</div>
+        <div class="list" id="slowList">아직 없음</div>
+        <div class="section-title" style="margin-top:16px;">도움말</div>
+        <div class="list">
+          <div>• <b>앵커</b>: A=1, M=13, Z=26을 기준점으로 잡으면 즉답 속도가 빨라진다.</div>
+          <div>• <b>난이도 상</b>: 최근 오답/느린 항목에 가중치가 붙어 같은 유형이 더 자주 나온다.</div>
+          <div>• 입력 팁: 숫자↔문자 전환은 자동으로 처리한다(예: n2a에서 "23" 또는 "W" 모두 허용).</div>
+          <div>• 통계는 브라우저 <span class="mono">localStorage</span>에 저장된다(개별 항목별 평균시간/오답/느린횟수).</div>
+        </div>
+        <div class="footer">© 2025 알파벳↔숫자 즉답 퀴즈 • 데이터는 브라우저 로컬에만 저장됩니다 • 만든이: 동욱</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const ALPHABET = Array.from({length:26}, (_,i)=>String.fromCharCode(65+i));
+  const LETTER_TO_NUM = Object.fromEntries(ALPHABET.map((ch,i)=>[ch, i+1]));
+  const NUM_TO_LETTER = Object.fromEntries(Object.entries(LETTER_TO_NUM).map(([k,v])=>[v,k]));
+  const ANCHORS = {A:1, M:13, Z:26};
+
+  const els = {
+    mode: document.getElementById('mode'),
+    count: document.getElementById('count'),
+    seconds: document.getElementById('seconds'),
+    hard: document.getElementById('hard'),
+    anchors: document.getElementById('anchors'),
+    slow: document.getElementById('slow'),
+    start: document.getElementById('startBtn'),
+    stop: document.getElementById('stopBtn'),
+    export: document.getElementById('exportBtn'),
+    reset: document.getElementById('resetBtn'),
+    prompt: document.getElementById('prompt'),
+    anchorHint: document.getElementById('anchorHint'),
+    answer: document.getElementById('answer'),
+    submit: document.getElementById('submitBtn'),
+    feedback: document.getElementById('feedback'),
+    k_total: document.getElementById('k_total'),
+    k_acc: document.getElementById('k_acc'),
+    k_avg: document.getElementById('k_avg'),
+    k_best: document.getElementById('k_best'),
+    wrongList: document.getElementById('wrongList'),
+    slowList: document.getElementById('slowList'),
+  };
+
+  // 통계 저장/불러오기
+  const STAT_KEY = 'alpha_num_stats_v1';
+  function loadStats(){ try { return JSON.parse(localStorage.getItem(STAT_KEY) || '{}'); } catch { return {}; } }
+  function saveStats(data){ try { localStorage.setItem(STAT_KEY, JSON.stringify(data)); } catch {}
+  }
+  function resetStats(){ localStorage.removeItem(STAT_KEY); }
+
+  let session = null; // 현재 세션 상태
+
+  function pickItem(mode, hard, stats){
+    let items = [];
+    if(mode==='a2n' || mode==='mixed') ALPHABET.forEach(ch=>items.push(['a2n', ch]));
+    if(mode==='n2a' || mode==='mixed') for(let n=1;n<=26;n++) items.push(['n2a', n]);
+
+    if(!hard){ return items[Math.floor(Math.random()*items.length)]; }
+
+    // hard: 최근 오답/느림 가중
+    const weighted = items.map(([sub, p])=>{
+      const key = `${sub}:${p}`;
+      const s = stats[key] || {};
+      const w = 1 + (s.wrong||0)*2 + (s.slow||0)*1 + ((sub==='a2n' && 'QWERTY'.includes(p)) || (sub==='n2a' && p>=17 && p<=23) ? 0.5 : 0);
+      return [w, [sub, p]];
+    });
+    const total = weighted.reduce((a,[w])=>a+w,0);
+    let r = Math.random()*total;
+    for(const [w, item] of weighted){ r -= w; if(r <= 0) return item; }
+    return weighted[weighted.length-1][1];
+  }
+
+  function formatPrompt(sub, p){ return `${p} → ?`; }
+  function anchorText(sub, p){
+    if(!els.anchors.checked) return '';
+    if(sub==='a2n' && ANCHORS[p]!==undefined) return `(앵커: ${p}=${ANCHORS[p]})`;
+    if(sub==='n2a'){
+      const inv = Object.fromEntries(Object.entries(ANCHORS).map(([k,v])=>[v,k]));
+      if(inv[p]) return `(앵커: ${p}=${inv[p]})`;
+    }
+    return '';
+  }
+
+  function checkAnswer(sub, p, raw){
+    let ans = String(raw).trim().toUpperCase();
+    let correct;
+    if(sub==='a2n') { correct = String(LETTER_TO_NUM[p]); return [ans===correct, correct]; }
+    // n2a
+    if(/^\d+$/.test(ans)) { const num = parseInt(ans, 10); if(NUM_TO_LETTER[num]) ans = NUM_TO_LETTER[num]; }
+    correct = NUM_TO_LETTER[p];
+    return [ans===correct, correct];
+  }
+
+  function updateKpi(){
+    const t = session.correct + session.wrong;
+    const acc = t ? (session.correct*100/t) : 0;
+    const avg = session.times.length ? (session.times.reduce((a,b)=>a+b,0)/session.times.length) : 0;
+    const best = session.times.length ? Math.min(...session.times) : 0;
+    const worst = session.times.length ? Math.max(...session.times) : 0;
+
+    els.k_total.textContent = t;
+    els.k_acc.textContent = `${acc.toFixed(1)}%`;
+    els.k_avg.textContent = `${avg.toFixed(2)}s`;
+    els.k_best.textContent = `${best.toFixed(2)}–${worst.toFixed(2)}s`;
+  }
+
+  function renderLists(){
+    if(session.wrongItems.length){
+      els.wrongList.innerHTML = session.wrongItems.map(([sub,p,c])=>`<div>• <span class="mono">${sub}</span> ${p} → <b>${c}</b></div>`).join('');
+    } else { els.wrongList.textContent = '아직 없음'; }
+
+    if(session.slowItems.length){
+      const slowTop = [...session.slowItems].sort((a,b)=>b[2]-a[2]).slice(0,10);
+      els.slowList.innerHTML = slowTop.map(([sub,p,t])=>`<div>• <span class="mono">${sub}</span> ${p}: ${t.toFixed(2)}s</div>`).join('');
+    } else { els.slowList.textContent = '아직 없음'; }
+  }
+
+  function nextQuestion(){
+    const [sub, p] = pickItem(els.mode.value, els.hard.checked, session.stats);
+    session.current = {sub, p};
+    els.prompt.textContent = formatPrompt(sub, p);
+    els.anchorHint.textContent = anchorText(sub, p);
+    els.answer.value = '';
+    els.answer.focus();
+    session.qStart = performance.now();
+  }
+
+  function record(isCorrect, elapsed, correctAns){
+    const {sub, p} = session.current;
+    const key = `${sub}:${p}`;
+    const slowTh = parseFloat(els.slow.value) || 1.0;
+
+    const s = session.stats[key] || {seen:0, avg_time:0, wrong:0, slow:0};
+    s.seen += 1;
+    s.avg_time = ((s.avg_time*(s.seen-1)) + elapsed) / s.seen;
+    if(!isCorrect) s.wrong += 1;
+    if(elapsed >= slowTh) s.slow += 1;
+    session.stats[key] = s;
+
+    session.times.push(elapsed);
+    if(isCorrect) session.correct += 1; else { session.wrong += 1; session.wrongItems.push([sub,p,correctAns]); }
+    if(elapsed >= slowTh) session.slowItems.push([sub,p,elapsed]);
+  }
+
+  function finish(){
+    session.running = false;
+    els.start.disabled = false; els.stop.disabled = true; els.submit.disabled = true; els.answer.disabled = true;
+    saveStats(session.stats);
+    updateKpi(); renderLists();
+    els.feedback.innerHTML = `<span class="ok">세션 종료</span> — 총 ${session.correct+session.wrong}문제, 정확도 ${(session.correct*100/(session.correct+session.wrong)||0).toFixed(1)}%, 평균 ${(session.times.reduce((a,b)=>a+b,0)/(session.times.length||1)).toFixed(2)}s`;
+  }
+
+  function start(){
+    // 상호 배타 옵션 처리
+    if(els.seconds.value){ els.count.value = ''; }
+
+    session = {
+      running: true,
+      stats: loadStats(),
+      correct: 0, wrong: 0, times: [], wrongItems: [], slowItems: [],
+      current: null, qStart: 0,
+      timerId: null, deadline: null,
+    };
+
+    els.start.disabled = true; els.stop.disabled = false; els.submit.disabled = false; els.answer.disabled = false; els.feedback.textContent='';
+
+    if(els.seconds.value){
+      const sec = Math.max(10, Math.min(600, parseInt(els.seconds.value, 10) || 60));
+      session.deadline = performance.now() + sec*1000;
+      session.timerId = setInterval(()=>{
+        const remain = Math.max(0, session.deadline - performance.now());
+        els.k_total.textContent = `${Math.ceil(remain/1000)}s`;
+        if(remain <= 0){ clearInterval(session.timerId); finish(); }
+      }, 200);
+    } else {
+      els.k_total.textContent = '0';
+    }
+
+    nextQuestion(); updateKpi(); renderLists();
+  }
+
+  function submit(){
+    if(!session?.running || !session.current) return;
+    const elapsed = (performance.now() - session.qStart) / 1000;
+    const raw = els.answer.value;
+    const [ok, correct] = checkAnswer(session.current.sub, session.current.p, raw);
+    record(ok, elapsed, correct);
+    updateKpi(); renderLists();
+    els.feedback.innerHTML = ok ? `<span class="ok">✅ 정답!</span> <span class="small">(${elapsed.toFixed(2)}s)</span>` : `<span class="bad">❌ 오답.</span> 정답: <b>${correct}</b> <span class="small">(${elapsed.toFixed(2)}s)</span>`;
+
+    if(els.seconds.value){ // 시간 모드: 시간 남으면 다음
+      if(performance.now() < session.deadline){ nextQuestion(); }
+      else { finish(); }
+    } else {
+      // 문제 개수 모드
+      const target = Math.max(1, Math.min(200, parseInt(els.count.value, 10) || 30));
+      const solved = session.correct + session.wrong;
+      els.k_total.textContent = `${solved}/${target}`;
+      if(solved >= target) finish(); else nextQuestion();
+    }
+  }
+
+  // 이벤트 바인딩
+  els.start.addEventListener('click', start);
+  els.stop.addEventListener('click', ()=>{ if(session?.running){ if(session.timerId) clearInterval(session.timerId); finish(); }});
+  els.submit.addEventListener('click', submit);
+  els.answer.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submit(); });
+
+  els.export.addEventListener('click', ()=>{
+    const data = loadStats();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'alpha_num_stats.json'; a.click();
+    URL.revokeObjectURL(url);
+  });
+  els.reset.addEventListener('click', ()=>{ if(confirm('정말 통계를 초기화할까?')){ resetStats(); alert('초기화 완료'); }});
+
+  // 초기 상태
+  els.answer.disabled = true; els.submit.disabled = true; els.stop.disabled = true;
+})();
+</script>
+</body>
+</html>
