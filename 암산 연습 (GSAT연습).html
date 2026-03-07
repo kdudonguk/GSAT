@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>암산 연습 (오프라인 · 교차곱 슬라이더 + 유형선택)</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--card:#ffffff;--line:#e2e8f0}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,Helvetica,Arial,sans-serif}
+  .container{max-width:1000px;margin:0 auto;padding:24px}
+  h1{margin:0;font-size:28px;font-weight:800} .muted{color:var(--muted)}
+  .row{display:grid;gap:16px} @media(min-width:900px){.cols-2{grid-template-columns:1fr 1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:.6rem 1rem;border-radius:14px;background:#0f172a;color:#fff;border:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}.btn:hover{opacity:.95}
+  .btn.ghost{background:#eef2f7;color:#0f172a}.btn.small{padding:.4rem .8rem;border-radius:12px;font-size:14px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:.35rem .75rem;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .chip.active{background:#0f172a;color:#fff;border-color:#0f172a}
+  .inp{width:100%;padding:.55rem .8rem;border-radius:10px;border:1px solid var(--line)}
+  input[type=range]{width:100%}
+  .stats{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:999px;padding:.35rem .75rem;font-size:13px}
+  .timer{background:#0f172a;color:#fff;border-radius:999px;padding:.35rem .7rem}
+  .timer.low{background:#dc2626}
+  .bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}.bar>i{display:block;height:100%;background:#0f172a}
+  .center{text-align:center}.big{font-size:28px;font-weight:800}
+  .choices{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .choice{min-width:72px}.rel{width:56px}
+  .ok{background:#ecfdf5;border-color:#bbf7d0}.bad{background:#fff1f2;border-color:#fecdd3}
+  .hidden{display:none}
+  .hint{font-size:13px;color:var(--muted)}
+  .list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .li{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+  .li .meta{display:flex;justify-content:space-between;gap:10px}
+  footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12px}
+  /* 수식(오프라인 CSS) */
+  .expr{display:inline-flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .times::before{content:'×'}
+  .approx::before{content:'≈'}
+  .percent::after{content:'%'}
+  .frac{display:inline-grid;grid-auto-flow:row;align-items:center;justify-items:center;line-height:1}
+  .frac .top{padding:0 .15em;border-bottom:1.8px solid currentColor;transform:translateY(.08em)}
+  .frac .bot{padding:0 .15em;transform:translateY(-.08em)}
+  .qmark{padding:0 .3rem}
+  .mono{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="container">
+  <header style="display:flex;gap:12px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <h1>암산 연습 (GSAT연습)</h1>
+      <p class="muted" style="margin-top:4px">뺄셈 · 퍼센트 · 분수 비교 · 곱 비교 · 근사값</p>
+    </div>
+    <div class="stats">
+      <span class="stat" id="statAcc">정확도 0%</span>
+      <span class="stat" id="statCnt">0 / 0</span>
+      <span class="stat" id="statAvg">평균 0s</span>
+      <span class="timer hidden" id="statTimer">⏱ 0s</span>
+    </div>
+  </header>
+
+  <section id="setup" class="row cols-2" style="margin-top:16px">
+    <div class="card">
+      <h2>모드</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="chip active" id="modeRandom">랜덤</button>
+        <button class="chip" id="modeDaily">데일리 세트</button>
+      </div>
+      <div id="dailyBox" class="row" style="grid-template-columns:1fr 1fr;display:none">
+        <label> <span class="muted">DAY</span>
+          <input class="inp" type="number" id="dayNum" min="1" max="365" value="1" />
+        </label>
+        <label> <span class="muted">난이도</span>
+          <select class="inp" id="levelDaily"><option>easy</option><option selected>normal</option><option>hard</option></select>
+        </label>
+      </div>
+      <div id="randomBox" class="row" style="grid-template-columns:1fr 1fr">
+        <label> <span class="muted">문항 수</span>
+          <input class="inp" type="number" id="count" min="5" max="200" value="20" />
+        </label>
+        <label> <span class="muted">난이도</span>
+          <select class="inp" id="levelRandom"><option>easy</option><option selected>normal</option><option>hard</option></select>
+        </label>
+        <div style="grid-column:1 / -1">
+          <h2 style="margin:8px 0">유형 선택</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label class="chip"><input type="checkbox" class="type" value="sub" checked /> 뺄셈</label>
+            <label class="chip"><input type="checkbox" class="type" value="percent" checked /> 퍼센트</label>
+            <label class="chip"><input type="checkbox" class="type" value="frac" checked /> 분수 비교</label>
+            <label class="chip"><input type="checkbox" class="type" value="prodcmp" checked /> 곱 비교</label>
+            <label class="chip"><input type="checkbox" class="type" value="approx" checked /> 근사값</label>
+          </div>
+        </div>
+        <div style="grid-column:1 / -1">
+          <h2 style="margin:8px 0">값 차이 난도(슬라이더)</h2>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <label> <span class="muted">분수 교차곱 차이 |ad − cb| 최소</span>
+              <input type="range" id="fracCrossDiff" min="0" max="5000" step="1" value="300" />
+              <div class="muted" style="font-size:12px">현재: <b id="fracCrossDiffVal">300</b></div>
+            </label>
+            <label> <span class="muted">곱 상대차 |ab−cd| / max(ab,cd) 최소</span>
+              <input type="range" id="prodRDiff" min="0" max="0.5" step="0.005" value="0.08" />
+              <div class="muted" style="font-size:12px">현재: <b id="prodRDiffVal">0.08</b></div>
+            </label>
+          </div>
+          <p class="muted" style="margin:6px 0 0;font-size:12px">추천 기본값 — 분수 교차곱: easy 100 · normal 300 · hard 1000 / 곱 상대차: easy 0.03 · normal 0.08 · hard 0.15</p>
+        </div>
+      </div>
+      <div class="row" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px">
+        <label> <span class="muted">타이머 사용</span><br/>
+          <label class="chip"><input type="checkbox" id="useTimer" /> 켜기</label>
+        </label>
+        <label> <span class="muted">제한 시간(초)</span>
+          <input class="inp" type="number" id="secLimit" min="30" max="3600" value="180" />
+        </label>
+        <label> <span class="muted">소수 허용 오차</span>
+          <input class="inp" type="number" id="decTol" min="0" step="0.001" value="0.01" />
+        </label>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn" id="startBtn">시작</button>
+        <button class="btn ghost" id="hintBtn">요령 보기</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>암산 요령</h2>
+      <ul style="margin:0;padding-left:18px;color:var(--muted);line-height:1.7">
+        <li><b>보수 뺄셈</b>: 10·100·1000 보수로 쪼개 빼기</li>
+        <li><b>퍼센트</b>: 1%·5%·10%·12.5%(=1/8)·6.25%(=1/16)</li>
+        <li><b>분수 비교</b>: 교차곱 ad ? cb</li>
+        <li><b>곱 비교</b>: 공통 인수 제거·자리수 비교</li>
+        <li><b>근사</b>: 반올림 전 절사→보정</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="quiz" class="hidden" style="margin-top:16px">
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="muted" id="qMeta">문제 0 / 0</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="bar" style="width:180px"><i id="barFill" style="width:0%"></i></div>
+          <button class="btn small" id="stopBtn" title="처음으로(Esc)">처음으로</button>
+        </div>
+      </div>
+      <div class="center big mono" id="prompt">—</div>
+      <div class="center" id="inputWrap"></div>
+      <div class="center hint" id="hintLine" style="display:none">힌트: <span id="hintText"></span></div>
+    </div>
+  </section>
+
+  <section id="result" class="hidden" style="margin-top:16px">
+    <div class="card">
+      <h2>결과</h2>
+      <p class="muted" id="sumLine">정확도 0% · 맞힘 0개 · 틀림 0개 · 평균 0s</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn" id="restartBtn">다시 시작</button>
+      </div>
+      <ol class="list" id="historyList"></ol>
+    </div>
+  </section>
+
+  <footer>© 2025 암산 연습 • 데이터는 브라우저 로컬에만 저장됩니다 • 만든이: 동욱</footer>
+</div>
+
+<script>
+// ===== 유틸 =====
+const $=(q)=>document.querySelector(q); const $$=(q)=>Array.from(document.querySelectorAll(q));
+const fmt=(n)=> (typeof n==='number'&&Number.isFinite(n))?n.toLocaleString('ko-KR'):String(n);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)); const EPS=1e-6;
+function mulberry32(seed){let t=seed>>>0;return function(){t|=0;t=(t+0x6D2B79F5)|0;let r=Math.imul(t^(t>>>15),1|t);r^=r+Math.imul(r^(r>>>7),61|r);return((r^(r>>>14))>>>0)/4294967296;}};
+const seededInt=(rng,min,max)=>Math.floor(rng()*(max-min+1))+min; const pick=(rng,arr)=>arr[Math.floor(rng()*arr.length)];
+
+// 수식 DOM 렌더
+function span(cls,txt){const s=document.createElement('span'); if(cls) s.className=cls; if(txt!=null) s.textContent=String(txt); return s;}
+function fracEl(a,b){const f=span('frac'); f.appendChild(span('top',fmt(a))); f.appendChild(span('bot',fmt(b))); return f;}
+function expr(){const e=span('expr'); return e;}
+function renderPrompt(container, obj){
+  container.innerHTML='';
+  if(obj.type==='sub'){
+    container.textContent=`${fmt(obj.a)} − ${fmt(obj.b)}`;
+  } else if(obj.type==='percent'){
+    const e=expr(); e.append(span('',fmt(obj.base))); e.append(span('times','')); e.append(span('',fmt(obj.p))); e.append(span('percent',''));
+    container.appendChild(e);
+  } else if(obj.type==='frac'){
+    const e=expr(); e.appendChild(fracEl(obj.a,obj.b)); e.append(span('qmark','?')); e.appendChild(fracEl(obj.c,obj.d)); container.appendChild(e);
+  } else if(obj.type==='prodcmp'){
+    const e=expr(); e.append(span('',fmt(obj.a))); e.append(span('times','')); e.append(span('',fmt(obj.b))); e.append(span('qmark','?')); e.append(span('',fmt(obj.c))); e.append(span('times','')); e.append(span('',fmt(obj.d))); container.appendChild(e);
+  } else if(obj.type==='approx'){
+    const e=expr(); e.append(span('',fmt(obj.N))); e.append(span('times','')); e.append(span('',fmt(obj.P))); e.append(span('percent','')); e.append(span('approx','')); e.append(span('','? (정수 반올림)')); container.appendChild(e);
+  }
+}
+
+// ===== 난이도/범위 =====
+const ranges={
+  easy:{subA:[100,999],subB:[10,999],pctBase:[100,5000],pctPercInt:[5,50],pctPercDec:[0,1],fracN:[10,150],fracD:[20,200],mulA:[20,500],mulB:[20,500],hasDecimal:false,approxN:[5000,60000],approxP:[8,35]},
+  normal:{subA:[1000,50000],subB:[100,40000],pctBase:[1000,80000],pctPercInt:[8,70],pctPercDec:[0,2],fracN:[30,500],fracD:[40,800],mulA:[40,1500],mulB:[40,1500],hasDecimal:true,approxN:[10000,120000],approxP:[10,60]},
+  hard:{subA:[10000,200000],subB:[1000,150000],pctBase:[5000,300000],pctPercInt:[5,90],pctPercDec:[1,2],fracN:[50,1500],fracD:[60,3000],mulA:[100,5000],mulB:[100,5000],hasDecimal:true,approxN:[30000,500000],approxP:[8,90]},
+};
+
+// ===== 문제 생성기 =====
+function genSub(rng,level){const[Amin,Amax]=ranges[level].subA;const[Bmin,Bmax]=ranges[level].subB;let a=seededInt(rng,Amin,Amax);let b=seededInt(rng,Bmin,Math.min(Bmax,a));if(b>a)[a,b]=[b,a];const ans=a-b;return{type:'sub',a,b,answer:ans,input:'number',hint:'보수 뺄셈으로 분해'};}
+function rndPercent(rng,level){const[pmin,pmax]=ranges[level].pctPercInt;const i=seededInt(rng,pmin,pmax);const[dmin,dmax]=ranges[level].pctPercDec;const dc=seededInt(rng,dmin,dmax);if(dc===0)return i;const d=seededInt(rng,1,9);return Number(`${i}.${d}`);} 
+const nearlyEq=(a,b,t=1e-2)=>Math.abs(Number(a)-Number(b))<=t;
+function genPercent(rng,level){const[Bmin,Bmax]=ranges[level].pctBase;const base=seededInt(rng,Bmin,Bmax);const p=rndPercent(rng,level);const raw=base*(p/100);return{type:'percent',base,p,answer:raw,input:'number',evaluate:(u,s)=>nearlyEq(u,raw,s.decimalTolerance),hint:'p%=p/100, 12.5%=1/8'};}
+function genFrac(rng,level,minCrossDiff){const[nmin,nmax]=ranges[level].fracN;const[dmin,dmax]=ranges[level].fracD;let a,b,c,d;let tries=0;while(true){
+    a=seededInt(rng,nmin,nmax); b=seededInt(rng,dmin,dmax)||1; c=seededInt(rng,nmin,nmax); d=seededInt(rng,dmin,dmax)||1;
+    if((a>c && b>d)||(a<c && b<d)) { if(++tries>500) break; else continue; }
+    const diffCross=Math.abs(a*d - c*b);
+    if(diffCross >= (minCrossDiff||0)) break;
+    if(++tries>500){ minCrossDiff = Math.max(1, (minCrossDiff||0)*0.5); tries=0; }
+  }
+  const L=a*d,R=c*b; const rel=Math.abs(L-R)<=EPS?'=':(L>R?'>':'<');
+  return{type:'frac',a,b,c,d,answer:rel,input:'choice-rel',hint:'교차곱 ad ? cb'};
+}
+function withMaybeDecimal(rng,n,has){return has&&rng()<0.3?Number((n+rng()).toFixed(1)):n;}
+function genProdCmp(rng,level,minRelDiff){const{mulA,mulB,hasDecimal}=ranges[level];let a,b,c,d; let tries=0;while(true){
+    a=withMaybeDecimal(rng,seededInt(rng,mulA[0],mulA[1]),hasDecimal);
+    b=withMaybeDecimal(rng,seededInt(rng,mulB[0],mulB[1]),hasDecimal);
+    c=withMaybeDecimal(rng,seededInt(rng,mulA[0],mulA[1]),hasDecimal);
+    d=withMaybeDecimal(rng,seededInt(rng,mulB[0],mulB[1]),hasDecimal);
+    if((a>c && b>d)||(a<c && b<d)) { if(++tries>500) break; else continue; }
+    const L=a*b, R=c*d; const relDiff = Math.abs(L-R)/Math.max(Math.abs(L),Math.abs(R));
+    if(relDiff >= (minRelDiff||0)) break;
+    if(++tries>500){ minRelDiff*=0.5; tries=0; }
+  }
+  const L=a*b,R=c*d; const rel=Math.abs(L-R)<=EPS?'=':(L>R?'>':'<');
+  return{type:'prodcmp',a,b,c,d,answer:rel,input:'choice-rel',hint:'공통 인수 제거·자리수 비교'};
+}
+function genApprox(rng,level){const[Nmin,Nmax]=ranges[level].approxN;const[Pmin,Pmax]=ranges[level].approxP;const N=seededInt(rng,Nmin,Nmax);const P=seededInt(rng,Pmin,Pmax);const exact=N*(P/100);const center=Math.round(exact);const delta=Math.max(200,Math.round(center*0.02));const opts=[center-delta,center,center+delta];for(let i=opts.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[opts[i],opts[j]]=[opts[j],opts[i]];}const correct=opts.findIndex(v=>v===center);return{type:'approx',N,P,choices:opts,answer:correct,input:'choice-3',hint:'반올림 전 절사→보정'};}
+
+function buildDailySet(day=1,level='normal',fracMinCross=300,prodMin=0.08){const rng=mulberry32(12345+day*777);const out=[];const push=(fn,k)=>{for(let i=0;i<k;i++)out.push(fn(rng,level,fn===genFrac?fracMinCross:fn===genProdCmp?prodMin:undefined));};push(genSub,9);push(genPercent,9);push(genFrac,6);push(genProdCmp,5);out.push(genApprox(rng,level));return out;}
+function buildRandomSet({count,types,level,fracMinCross,prodMin}){const rng=mulberry32(Date.now()%0x7fffffff);const map={sub:genSub,percent:genPercent,frac:(r,l)=>genFrac(r,l,fracMinCross),prodcmp:(r,l)=>genProdCmp(r,l,prodMin),approx:genApprox};const out=[];for(let i=0;i<count;i++){const t=pick(rng,types);out.push(map[t](rng,level));}return out;}
+
+// ===== 상태 & 저장 =====
+let mode='random', level='normal', day=1, count=20, types=['sub','percent','frac','prodcmp','approx'];
+let withTimer=false, secLimit=180, decTol=0.01;
+let minFracCross=300, minProdRDiff=0.08;
+let started=false, finished=false, problems=[], idx=0, choiceIdx=null, relChoice=null, secondsLeft=secLimit, timerId=null, history=[], startTs=null, showHint=false, awaitingNext=false;
+
+function save(){localStorage.setItem('mm_mode',mode);localStorage.setItem('mm_level',level);localStorage.setItem('mm_day',String(day));localStorage.setItem('mm_types',JSON.stringify(types));localStorage.setItem('mm_count',String(count));localStorage.setItem('mm_timer',withTimer?'1':'0');localStorage.setItem('mm_limit',String(secLimit));localStorage.setItem('mm_tol',String(decTol));localStorage.setItem('mm_fracCrossMin',String(minFracCross));localStorage.setItem('mm_prodMin',String(minProdRDiff));}
+function load(){mode=localStorage.getItem('mm_mode')||'random';level=localStorage.getItem('mm_level')||'normal';day=Number(localStorage.getItem('mm_day')||1);types=JSON.parse(localStorage.getItem('mm_types')||'["sub","percent","frac","prodcmp","approx"]');count=Number(localStorage.getItem('mm_count')||20);withTimer=(localStorage.getItem('mm_timer')==='1');secLimit=Number(localStorage.getItem('mm_limit')||180);decTol=Number(localStorage.getItem('mm_tol')||0.01);minFracCross=Number(localStorage.getItem('mm_fracCrossMin') ?? 300);minProdRDiff=Number(localStorage.getItem('mm_prodMin')||0.08);} 
+
+// ===== 바인딩 =====
+const modeRandomBtn=$('#modeRandom'), modeDailyBtn=$('#modeDaily');
+const dailyBox=$('#dailyBox'), randomBox=$('#randomBox');
+const dayNum=$('#dayNum'), levelDaily=$('#levelDaily'), levelRandom=$('#levelRandom');
+const countInp=$('#count'), typeInputs=$$('.type');
+const useTimer=$('#useTimer'), secLimitInp=$('#secLimit'), decTolInp=$('#decTol');
+const fracCrossRange=$('#fracCrossDiff'), prodRDiffRange=$('#prodRDiff');
+const fracCrossVal=$('#fracCrossDiffVal'), prodRDiffVal=$('#prodRDiffVal');
+const startBtn=$('#startBtn'), hintBtn=$('#hintBtn');
+const setup=$('#setup'), quiz=$('#quiz'), result=$('#result');
+const qMeta=$('#qMeta'), barFill=$('#barFill'), promptEl=$('#prompt'), inputWrap=$('#inputWrap');
+const hintLine=$('#hintLine'), hintText=$('#hintText');
+const statAcc=$('#statAcc'), statCnt=$('#statCnt'), statAvg=$('#statAvg'), statTimer=$('#statTimer');
+const sumLine=$('#sumLine'), restartBtn=$('#restartBtn'), historyList=$('#historyList');
+const stopBtn=$('#stopBtn');
+
+function levelDefaults(lv){
+  if(lv==='easy') return {fracCross:100, prod:0.03};
+  if(lv==='hard') return {fracCross:1000, prod:0.15};
+  return {fracCross:300, prod:0.08};
+}
+
+function syncSetupUI(){modeRandomBtn.classList.toggle('active',mode==='random');modeDailyBtn.classList.toggle('active',mode==='daily');dailyBox.style.display=mode==='daily'?'grid':'none';randomBox.style.display=mode==='random'?'grid':'none';dayNum.value=day;levelDaily.value=level;levelRandom.value=level;countInp.value=count;useTimer.checked=withTimer;secLimitInp.value=secLimit;decTolInp.value=decTol; if(fracCrossRange){fracCrossRange.value=minFracCross; if(fracCrossVal) fracCrossVal.textContent=String(minFracCross);} if(prodRDiffRange){prodRDiffRange.value=minProdRDiff; if(prodRDiffVal) prodRDiffVal.textContent=String(minProdRDiff);} typeInputs.forEach(chk=>{chk.checked=types.includes(chk.value)});statTimer.classList.toggle('hidden',!withTimer);} 
+function readSetupFromUI(){day=clamp(Number(dayNum.value)||1,1,365);level=(mode==='daily'?levelDaily.value:levelRandom.value)||'normal';count=clamp(Number(countInp.value)||20,5,200);withTimer=useTimer.checked;secLimit=clamp(Number(secLimitInp.value)||180,30,3600);decTol=Math.max(0,Number(decTolInp.value)||0); if(fracCrossRange){minFracCross=Math.max(0,Number(fracCrossRange.value)||0);} if(prodRDiffRange){minProdRDiff=Math.max(0,Number(prodRDiffRange.value)||0);} if(fracCrossVal) fracCrossVal.textContent=String(minFracCross); if(prodRDiffVal) prodRDiffVal.textContent=String(minProdRDiff); types=$$('.type').filter(x=>x.checked).map(x=>x.value); if(types.length===0) types=['sub'];}
+
+modeRandomBtn.addEventListener('click',()=>{mode='random';syncSetupUI();save();});
+modeDailyBtn.addEventListener('click',()=>{mode='daily';syncSetupUI();save();});
+[dayNum,levelDaily,levelRandom,countInp,useTimer,secLimitInp,decTolInp,fracCrossRange,prodRDiffRange].forEach(el=>el?.addEventListener('input',()=>{readSetupFromUI();save();}));
+// 유형 선택 변경 반영
+$$('.type').forEach(el=>el.addEventListener('change',()=>{readSetupFromUI();save();}));
+
+[levelDaily,levelRandom].forEach(sel=>sel.addEventListener('change',()=>{const d=levelDefaults(sel.value); if(fracCrossRange) fracCrossRange.value=d.fracCross; if(prodRDiffRange) prodRDiffRange.value=d.prod; readSetupFromUI(); save(); }));
+
+hintBtn.addEventListener('click',()=>{showHint=!showHint;if(started)renderProblem();});
+startBtn.addEventListener('click',begin); restartBtn.addEventListener('click',begin); stopBtn.addEventListener('click', goHome);
+
+// 단축키
+window.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape'){ if(started && !finished){ goHome(); } return; }
+  if(!started||finished) return;
+  if(awaitingNext){ if(e.key==='Enter') nextQuestion(); return; }
+  const cur=problems[idx]; if(!cur) return;
+  if(cur.input==='choice-3'){
+    if(e.key==='1') selectChoice(0);
+    if(e.key==='2') selectChoice(1);
+    if(e.key==='3') selectChoice(2);
+    if(e.key==='Enter') submit();
+  } else if(cur.input==='choice-rel'){
+    if(['<','>','='].includes(e.key)) {relChoice=e.key; renderProblem();}
+    if(e.key==='Enter') submit();
+  } else if(cur.input==='number'){
+    if(e.key==='Enter') submit();
+  }
+});
+
+function begin(){readSetupFromUI();save();const opts={count,types,level,fracMinCross:minFracCross,prodMin:minProdRDiff};problems=(mode==='random')?buildRandomSet(opts):buildDailySet(day,level,minFracCross,minProdRDiff);idx=0;history=[];started=true;finished=false;choiceIdx=null;relChoice=null;awaitingNext=false;secondsLeft=secLimit;showHint=false;setup.classList.add('hidden');result.classList.add('hidden');quiz.classList.remove('hidden');if(timerId)clearInterval(timerId);if(withTimer){statTimer.textContent=`⏱ ${secondsLeft}s`;statTimer.classList.toggle('low',secondsLeft<=10);timerId=setInterval(()=>{secondsLeft--;if(secondsLeft<=0){secondsLeft=0;statTimer.textContent='⏱ 0s';finalize();}else{statTimer.textContent=`⏱ ${secondsLeft}s`;statTimer.classList.toggle('low',secondsLeft<=10);}},1000);} startTs=performance.now(); renderProblem(); updateStats();}
+
+function goHome(){ if(timerId){clearInterval(timerId);timerId=null;} started=false; finished=false; awaitingNext=false; quiz.classList.add('hidden'); result.classList.add('hidden'); setup.classList.remove('hidden'); }
+
+function finalize(){if(timerId){clearInterval(timerId);timerId=null;}started=false;finished=true;quiz.classList.add('hidden');result.classList.remove('hidden');const acc=history.length?Math.round(history.filter(h=>h.ok).length*100/history.length):0;const avgMs=history.length?Math.round(history.reduce((s,x)=>s+x.ms,0)/history.length):0;const okC=history.filter(h=>h.ok).length;const badC=history.length-okC;sumLine.textContent=`정확도 ${acc}% · 맞힘 ${okC}개 · 틀림 ${badC}개 · 평균 ${Math.round(avgMs/10)/100}s`;historyList.innerHTML='';history.forEach((h,i)=>{const li=document.createElement('li');li.className='li';const qnode=document.createElement('span'); renderPrompt(qnode,normalizeProblem(h.q)); li.innerHTML=`<div class="meta"><div><b>Q${i+1}. </b><span class="mono" id="q${i}"></span><div class="muted" style="margin-top:4px">정답: ${formatAnswer(h.q)}</div><div class="muted">내 답: ${formatUser(h)}</div></div><div class="muted">${Math.round(h.ms/10)/100}s</div></div>`; historyList.appendChild(li); const target=li.querySelector('#q'+i); renderPrompt(target,normalizeProblem(h.q));});updateStats();}
+
+function normalizeProblem(q){ if(q.type==='sub') return {type:'sub',a:q.a,b:q.b}; if(q.type==='percent') return {type:'percent',base:q.base,p:q.p}; if(q.type==='frac') return {type:'frac',a:q.a,b:q.b,c:q.c,d:q.d}; if(q.type==='prodcmp') return {type:'prodcmp',a:q.a,b:q.b,c:q.c,d:q.d}; if(q.type==='approx') return {type:'approx',N:q.N,P:q.P}; return q; }
+function formatAnswer(q){ if(typeof q.answer==='number'){return fmt(q.answer);} if(q.input==='choice-3'){return fmt(q.choices[q.answer]);} return String(q.answer); }
+function formatUser(h){if(h.q.input==='number')return fmt(h.user);if(h.q.input==='choice-3')return typeof h.user==='number'?fmt(h.q.choices[h.user]??NaN):'-';return h.user??'-';}
+function updateStats(){const solved=history.length;const ok=history.filter(h=>h.ok).length;const bad=solved-ok;const acc=(solved?Math.round(ok*100/solved):0)+'%';const avgMs=solved?Math.round(history.reduce((s,x)=>s+x.ms,0)/solved):0;statAcc.textContent=`정확도 ${acc}`;statCnt.textContent=`${ok} / ${bad}`;statAvg.textContent=`평균 ${Math.round(avgMs/10)/100}s`;}
+
+function renderProblem(){const cur=problems[idx];if(!cur){promptEl.textContent='끝!';return;}qMeta.textContent=`문제 ${idx+1} / ${problems.length}`;const pct=Math.round(idx*100/problems.length);barFill.style.width=pct+'%';renderPrompt(promptEl,normalizeProblem(cur));hintLine.style.display=showHint?'block':'none';hintText.textContent=cur.hint||'';inputWrap.innerHTML='';if(cur.input==='number'){const wrap=document.createElement('div');wrap.style.display='flex';wrap.style.justifyContent='center';wrap.style.gap='8px';const inp=document.createElement('input');inp.className='inp';inp.style.textAlign='center';inp.style.fontSize='20px';inp.style.width='200px';inp.placeholder='답 입력';inp.id='numInput';const btn=document.createElement('button');btn.className='btn';btn.textContent='제출';btn.addEventListener('click',submit);wrap.appendChild(inp);wrap.appendChild(btn);inputWrap.appendChild(wrap);inp.focus();}else if(cur.input==='choice-3'){const box=document.createElement('div');box.className='choices';cur.choices.forEach((c,i)=>{const b=document.createElement('button');b.className='btn choice';b.textContent=fmt(c);b.addEventListener('click',()=>{selectChoice(i);});box.appendChild(b);});const sb=document.createElement('button');sb.className='btn';sb.textContent='제출';sb.addEventListener('click',submit);box.appendChild(sb);inputWrap.appendChild(box);}else if(cur.input==='choice-rel'){const box=document.createElement('div');box.className='choices';['<','>','='].forEach(s=>{const b=document.createElement('button');b.className='btn rel';b.textContent=s;b.addEventListener('click',()=>{relChoice=s;renderProblem();});box.appendChild(b);});const sb=document.createElement('button');sb.className='btn';sb.textContent='제출';sb.addEventListener('click',submit);box.appendChild(sb);inputWrap.appendChild(box);if(relChoice){[...box.querySelectorAll('button')].forEach(b=>{if(b.textContent===relChoice)b.style.outline='3px solid #0f172a';else if(b.className.includes('rel'))b.style.outline='none';});}}}
+
+function selectChoice(i){choiceIdx=i; $$('#quiz .choice').forEach((b,bi)=>{b.style.outline=(bi===i)?'3px solid #0f172a':'none';});}
+
+function submit(){ if(awaitingNext) return; const cur=problems[idx]; if(!cur) return; let user=null, ok=false, correctText=''; if(cur.input==='number'){const inp=$('#numInput'); if(!inp||!inp.value.trim()) return; const val=Number(String(inp.value).replace(/,/g,'')); user=val; const tol=decTol; ok = cur.evaluate? !!cur.evaluate(val,{decimalTolerance:tol}) : Math.abs(val-Number(cur.answer))<=tol; correctText = (typeof cur.answer==='number')?fmt(cur.answer):String(cur.answer);} else if(cur.input==='choice-3'){ if(choiceIdx==null) return; user=choiceIdx; ok=(choiceIdx===cur.answer); correctText=fmt(cur.choices[cur.answer]); } else if(cur.input==='choice-rel'){ if(!relChoice) return; user=relChoice; ok=(relChoice===cur.answer); correctText=String(cur.answer);} const now=performance.now(); const elapsed= now-(startTs||now); startTs=now; history.push({q:cur,user,ok,ms:elapsed}); updateStats(); awaitingNext=true; const cls= ok?'ok':'bad'; const userText=(cur.input==='number')?fmt(user):(cur.input==='choice-3'?(typeof user==='number'?fmt(cur.choices[user]??NaN):'-'):(user??'-')); inputWrap.innerHTML=`<div class="card ${cls}" style="display:inline-block;text-align:left;max-width:560px"><div style="font-weight:700;margin-bottom:6px">${ok?'정답!':'틀렸어'}</div><div class="muted" style="margin:4px 0">정답: <b>${correctText}</b></div><div class="muted">내 답: ${userText}</div><div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="btn small" id="nextBtn">다음</button></div></div>`; const nb=$('#nextBtn'); if(nb) nb.addEventListener('click', nextQuestion); }
+function nextQuestion(){ if(idx+1>=problems.length){ awaitingNext=false; finalize(); return; } idx++; choiceIdx=null; relChoice=null; awaitingNext=false; renderProblem(); updateStats(); }
+
+(function init(){ $('#year').textContent=new Date().getFullYear(); load(); syncSetupUI(); save(); })();
+</script>
+</body>
+</html>
