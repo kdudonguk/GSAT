@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OMR 입력 및 채점 웹앱</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f172a, #334155);
+      color: white;
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .hero .eyebrow {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.2;
+    }
+    .hero p {
+      margin: 12px 0 0;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    .hero-stat {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 16px 20px;
+      min-width: 180px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-stat strong {
+      display: block;
+      font-size: 30px;
+      margin-top: 6px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
+    .panel, .section-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 24px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+    }
+    .panel {
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .panel h2, .section-card h2 {
+      margin: 0 0 16px;
+      font-size: 20px;
+    }
+    .draft-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .draft-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .draft-item input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid #cbd5e1;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .btn-row, .control-buttons {
+      display: grid;
+      gap: 10px;
+    }
+    .btn-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button {
+      border: none;
+      cursor: pointer;
+      font: inherit;
+    }
+    .btn {
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      transition: 0.18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.dark { background: #0f172a; color: white; }
+    .btn.line { background: white; color: #334155; border: 1px solid #cbd5e1; }
+    .btn.orange { background: #f97316; color: white; }
+    .btn.amber { background: #f59e0b; color: white; }
+    .btn.blue { background: #2563eb; color: white; }
+    .btn.gray { background: #475569; color: white; }
+    .btn.red-text {
+      background: transparent;
+      color: #dc2626;
+      padding: 0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-box {
+      background: #f8fafc;
+      border-radius: 18px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #475569;
+      margin-top: 14px;
+    }
+    .status-box strong { color: #0f172a; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 14px;
+      background: white;
+    }
+    .stat-card .label {
+      color: #64748b;
+      font-size: 13px;
+    }
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 800;
+      margin-top: 8px;
+    }
+    .green { color: #059669; }
+    .red { color: #dc2626; }
+    .amber-text { color: #d97706; }
+    .slate { color: #334155; }
+    .detail-box {
+      margin-top: 14px;
+      background: #f8fafc;
+      border-radius: 18px;
+      padding: 16px;
+      font-size: 14px;
+      color: #475569;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-row strong { color: #0f172a; }
+    .sections-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .section-card {
+      padding: 20px;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .section-sub {
+      margin-top: 4px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    .hint {
+      background: #f8fafc;
+      color: #475569;
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .question-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .question-row {
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .question-main {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .qno {
+      min-width: 34px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .choices {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .choice-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #475569;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .choice-btn.selected {
+      background: #0f172a;
+      color: white;
+      border-color: #0f172a;
+    }
+    .clear-btn {
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #475569;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .result-text {
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .result-correct { color: #059669; }
+    .result-wrong { color: #dc2626; }
+    .result-empty { color: #d97706; }
+    .check-icon {
+      color: #059669;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 14px; }
+      .hero { padding: 20px; }
+      .hero h1 { font-size: 25px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .question-row { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">OMR 입력 및 채점 웹앱</div>
+        <h1>문항 수를 매번 바꿔서 쓰는 OMR 채점기</h1>
+        <p>영역 이름과 문항 수를 설정한 뒤, 응답 입력과 정답 입력을 분리해서 관리할 수 있다.</p>
+      </div>
+      <div class="hero-stat">
+        총 문항 수
+        <strong id="totalQuestions">50</strong>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <section class="panel">
+          <h2>시험 설정</h2>
+          <div id="draftList"></div>
+          <div class="btn-inline">
+            <button class="btn line" id="addSectionBtn">영역 추가</button>
+            <button class="btn dark" id="applySettingsBtn">설정 적용</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>컨트롤</h2>
+          <div class="control-buttons">
+            <button class="btn orange" id="toggleModeBtn">📝 정답 입력 모드로 전환</button>
+            <button class="btn blue" id="gradeBtn">📊 채점 및 통계 확인</button>
+            <button class="btn gray" id="resetBtn">🔄 RESET</button>
+          </div>
+          <div class="status-box">
+            현재 모드: <strong id="currentMode">응답 입력</strong><br />
+            채점 결과 표시: <strong id="gradingStatus">OFF</strong>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>채점 통계</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="label">맞은 문제</div>
+              <div class="value green" id="correctCount">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">틀린 문제</div>
+              <div class="value red" id="wrongCount">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">미응답</div>
+              <div class="value amber-text" id="unansweredCount">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">정답 미입력</div>
+              <div class="value slate" id="ungradedCount">0</div>
+            </div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-row"><span>맞은 / 푼 / 전체</span><strong id="summaryLine">0 / 0 / 0</strong></div>
+            <div class="detail-row"><span>정답률(정답 입력 문항 대비)</span><strong id="accuracyEntered">0.0%</strong></div>
+            <div class="detail-row"><span>정답률(전체 문항 대비)</span><strong id="accuracyTotal">0.0%</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="sections-wrap" id="sectionsWrap"></div>
+    </div>
+  </div>
+
+  <script>
+    const CHOICES = [1, 2, 3, 4, 5];
+
+    let sectionDrafts = [
+      { id: 1, name: '수리', count: 20 },
+      { id: 2, name: '추리', count: 30 }
+    ];
+    let nextDraftId = 3;
+    let sections = buildSectionsFromDrafts(sectionDrafts);
+    let isAnswerMode = false;
+    let gradingStarted = false;
+
+    function buildSectionsFromDrafts(drafts) {
+      return drafts.map(draft => ({
+        id: draft.id,
+        name: (draft.name || '').trim() || `영역 ${draft.id}`,
+        count: Math.max(1, Number(draft.count) || 1),
+        responses: Array(Math.max(1, Number(draft.count) || 1)).fill(null),
+        answerKey: Array(Math.max(1, Number(draft.count) || 1)).fill(null)
+      }));
+    }
+
+    function getStats() {
+      let correct = 0;
+      let wrong = 0;
+      let unanswered = 0;
+      let answerEntered = 0;
+      const totalQuestions = sections.reduce((sum, section) => sum + section.count, 0);
+
+      sections.forEach(section => {
+        section.answerKey.forEach((ans, idx) => {
+          const res = section.responses[idx];
+          if (ans !== null) {
+            answerEntered += 1;
+            if (res === null) unanswered += 1;
+            else if (res === ans) correct += 1;
+            else wrong += 1;
+          }
+        });
+      });
+
+      const graded = correct + wrong + unanswered;
+      const ungraded = totalQuestions - answerEntered;
+      const accuracyAgainstEntered = answerEntered > 0 ? ((correct / answerEntered) * 100).toFixed(1) : '0.0';
+      const accuracyAgainstTotal = totalQuestions > 0 ? ((correct / totalQuestions) * 100).toFixed(1) : '0.0';
+
+      return {
+        correct,
+        wrong,
+        unanswered,
+        answerEntered,
+        graded,
+        totalQuestions,
+        ungraded,
+        accuracyAgainstEntered,
+        accuracyAgainstTotal
+      };
+    }
+
+    function updateSectionValue(sectionId, index, value, targetKey) {
+      sections = sections.map(section => {
+        if (section.id !== sectionId) return section;
+        const next = [...section[targetKey]];
+        next[index] = next[index] === value ? null : value;
+        return { ...section, [targetKey]: next };
+      });
+      render();
+    }
+
+    function resetAll() {
+      sections = sections.map(section => ({
+        ...section,
+        responses: Array(section.count).fill(null),
+        answerKey: Array(section.count).fill(null)
+      }));
+      isAnswerMode = false;
+      gradingStarted = false;
+      render();
+    }
+
+    function applySettings() {
+      sectionDrafts = sectionDrafts
+        .map(draft => ({
+          ...draft,
+          name: (draft.name || '').trim() || `영역 ${draft.id}`,
+          count: Math.max(1, Number(draft.count) || 1)
+        }))
+        .filter(draft => draft.count > 0);
+
+      sections = buildSectionsFromDrafts(sectionDrafts);
+      isAnswerMode = false;
+      gradingStarted = false;
+      render();
+    }
+
+    function createDraftItem(draft, idx) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'draft-item';
+      wrapper.innerHTML = `
+        <div class="draft-head">
+          <span>영역 ${idx + 1}</span>
+          <button class="btn-red btn red-text" data-remove-id="${draft.id}" ${sectionDrafts.length === 1 ? 'disabled' : ''}>삭제</button>
+        </div>
+        <input type="text" value="${escapeHtml(draft.name)}" data-field="name" data-id="${draft.id}" placeholder="영역명" />
+        <input type="number" min="1" value="${draft.count}" data-field="count" data-id="${draft.id}" placeholder="문항 수" />
+      `;
+      return wrapper;
+    }
+
+    function createChoiceButton(choice, selected, onClick) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `choice-btn${selected ? ' selected' : ''}`;
+      btn.textContent = choice;
+      btn.addEventListener('click', onClick);
+      return btn;
+    }
+
+    function createQuestionRow(section, idx) {
+      const response = section.responses[idx];
+      const answer = section.answerKey[idx];
+      const row = document.createElement('div');
+      row.className = 'question-row';
+
+      const main = document.createElement('div');
+      main.className = 'question-main';
+
+      const qno = document.createElement('div');
+      qno.className = 'qno';
+      qno.textContent = `${idx + 1}.`;
+
+      const choices = document.createElement('div');
+      choices.className = 'choices';
+
+      CHOICES.forEach(choice => {
+        const selected = isAnswerMode ? answer === choice : response === choice;
+        const button = createChoiceButton(choice, selected, () => {
+          updateSectionValue(section.id, idx, choice, isAnswerMode ? 'answerKey' : 'responses');
+        });
+        choices.appendChild(button);
+      });
+
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'clear-btn';
+      clearBtn.textContent = '지우기';
+      clearBtn.addEventListener('click', () => {
+        updateSectionValue(section.id, idx, null, isAnswerMode ? 'answerKey' : 'responses');
+      });
+      choices.appendChild(clearBtn);
+
+      if (!isAnswerMode && gradingStarted && answer !== null) {
+        const result = document.createElement('div');
+        result.className = 'result-text';
+        if (response === null) {
+          result.classList.add('result-empty');
+          result.textContent = `미응답 · 정답 ${answer}`;
+        } else if (response === answer) {
+          result.classList.add('result-correct');
+          result.textContent = '정답';
+        } else {
+          result.classList.add('result-wrong');
+          result.textContent = `오답 · 정답 ${answer}`;
+        }
+        choices.appendChild(result);
+      }
+
+      main.appendChild(qno);
+      main.appendChild(choices);
+      row.appendChild(main);
+
+      if (!isAnswerMode) {
+        const side = document.createElement('div');
+        if (gradingStarted && response === answer && answer !== null) {
+          side.className = 'check-icon';
+          side.textContent = '✓';
+        }
+        row.appendChild(side);
+      }
+
+      return row;
+    }
+
+    function renderDrafts() {
+      const draftList = document.getElementById('draftList');
+      draftList.innerHTML = '';
+      sectionDrafts.forEach((draft, idx) => {
+        draftList.appendChild(createDraftItem(draft, idx));
+      });
+
+      draftList.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', e => {
+          const id = Number(e.target.dataset.id);
+          const field = e.target.dataset.field;
+          const value = field === 'count' ? e.target.value : e.target.value;
+          sectionDrafts = sectionDrafts.map(draft => draft.id === id ? { ...draft, [field]: value } : draft);
+        });
+      });
+
+      draftList.querySelectorAll('[data-remove-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.removeId);
+          if (sectionDrafts.length === 1) return;
+          sectionDrafts = sectionDrafts.filter(draft => draft.id !== id);
+          render();
+        });
+      });
+    }
+
+    function renderSections() {
+      const wrap = document.getElementById('sectionsWrap');
+      wrap.innerHTML = '';
+
+      sections.forEach(section => {
+        const card = document.createElement('section');
+        card.className = 'section-card';
+
+        const head = document.createElement('div');
+        head.className = 'section-head';
+        head.innerHTML = `
+          <div>
+            <h2 class="section-title">${escapeHtml(section.name)}</h2>
+            <div class="section-sub">총 ${section.count}문항</div>
+          </div>
+          ${!isAnswerMode ? '<div class="hint">미응답 문항은 그대로 비워두면 된다.</div>' : ''}
+        `;
+
+        const list = document.createElement('div');
+        list.className = 'question-list';
+
+        for (let i = 0; i < section.count; i += 1) {
+          list.appendChild(createQuestionRow(section, i));
+        }
+
+        card.appendChild(head);
+        card.appendChild(list);
+        wrap.appendChild(card);
+      });
+    }
+
+    function renderStats() {
+      const stats = getStats();
+      document.getElementById('totalQuestions').textContent = stats.totalQuestions;
+      document.getElementById('correctCount').textContent = stats.correct;
+      document.getElementById('wrongCount').textContent = stats.wrong;
+      document.getElementById('unansweredCount').textContent = stats.unanswered;
+      document.getElementById('ungradedCount').textContent = stats.ungraded;
+      document.getElementById('summaryLine').textContent = `${stats.correct} / ${stats.graded} / ${stats.totalQuestions}`;
+      document.getElementById('accuracyEntered').textContent = `${stats.accuracyAgainstEntered}%`;
+      document.getElementById('accuracyTotal').textContent = `${stats.accuracyAgainstTotal}%`;
+      document.getElementById('currentMode').textContent = isAnswerMode ? '정답 입력' : '응답 입력';
+      document.getElementById('gradingStatus').textContent = gradingStarted ? 'ON' : 'OFF';
+
+      const toggleModeBtn = document.getElementById('toggleModeBtn');
+      toggleModeBtn.textContent = isAnswerMode ? '📝 응답 입력 모드로 전환' : '📝 정답 입력 모드로 전환';
+      toggleModeBtn.className = `btn ${isAnswerMode ? 'amber' : 'orange'}`;
+    }
+
+    function render() {
+      renderDrafts();
+      renderSections();
+      renderStats();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    document.getElementById('addSectionBtn').addEventListener('click', () => {
+      sectionDrafts.push({ id: nextDraftId, name: `영역 ${nextDraftId}`, count: 10 });
+      nextDraftId += 1;
+      render();
+    });
+
+    document.getElementById('applySettingsBtn').addEventListener('click', applySettings);
+
+    document.getElementById('toggleModeBtn').addEventListener('click', () => {
+      isAnswerMode = !isAnswerMode;
+      render();
+    });
+
+    document.getElementById('gradeBtn').addEventListener('click', () => {
+      gradingStarted = true;
+      isAnswerMode = false;
+      render();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+    render();
+  </script>
+</body>
+</html>
