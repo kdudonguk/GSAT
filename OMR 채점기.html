@@ -101,7 +101,7 @@
       margin-bottom: 8px;
       font-size: 14px;
     }
-    .btn-row, .control-buttons {
+    .control-buttons {
       display: grid;
       gap: 10px;
     }
@@ -241,6 +241,11 @@
       gap: 14px;
       flex-wrap: wrap;
     }
+    .question-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
     .qno {
       min-width: 34px;
       font-size: 14px;
@@ -276,6 +281,24 @@
       padding: 7px 10px;
       font-size: 12px;
       font-weight: 700;
+    }
+    .star-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .star-btn.active {
+      border-color: #fbbf24;
+      background: #fffbeb;
+      color: #f59e0b;
     }
     .result-text {
       font-size: 12px;
@@ -384,13 +407,17 @@
     let gradingStarted = false;
 
     function buildSectionsFromDrafts(drafts) {
-      return drafts.map(draft => ({
-        id: draft.id,
-        name: (draft.name || '').trim() || `영역 ${draft.id}`,
-        count: Math.max(1, Number(draft.count) || 1),
-        responses: Array(Math.max(1, Number(draft.count) || 1)).fill(null),
-        answerKey: Array(Math.max(1, Number(draft.count) || 1)).fill(null)
-      }));
+      return drafts.map(draft => {
+        const count = Math.max(1, Number(draft.count) || 1);
+        return {
+          id: draft.id,
+          name: (draft.name || '').trim() || `영역 ${draft.id}`,
+          count,
+          responses: Array(count).fill(null),
+          answerKey: Array(count).fill(null),
+          starred: Array(count).fill(false)
+        };
+      });
     }
 
     function getStats() {
@@ -440,11 +467,22 @@
       render();
     }
 
+    function toggleStar(sectionId, index) {
+      sections = sections.map(section => {
+        if (section.id !== sectionId) return section;
+        const next = [...section.starred];
+        next[index] = !next[index];
+        return { ...section, starred: next };
+      });
+      render();
+    }
+
     function resetAll() {
       sections = sections.map(section => ({
         ...section,
         responses: Array(section.count).fill(null),
-        answerKey: Array(section.count).fill(null)
+        answerKey: Array(section.count).fill(null),
+        starred: Array(section.count).fill(false)
       }));
       isAnswerMode = false;
       gradingStarted = false;
@@ -472,7 +510,7 @@
       wrapper.innerHTML = `
         <div class="draft-head">
           <span>영역 ${idx + 1}</span>
-          <button class="btn-red btn red-text" data-remove-id="${draft.id}" ${sectionDrafts.length === 1 ? 'disabled' : ''}>삭제</button>
+          <button class="btn red-text" data-remove-id="${draft.id}" ${sectionDrafts.length === 1 ? 'disabled' : ''}>삭제</button>
         </div>
         <input type="text" value="${escapeHtml(draft.name)}" data-field="name" data-id="${draft.id}" placeholder="영역명" />
         <input type="number" min="1" value="${draft.count}" data-field="count" data-id="${draft.id}" placeholder="문항 수" />
@@ -492,6 +530,8 @@
     function createQuestionRow(section, idx) {
       const response = section.responses[idx];
       const answer = section.answerKey[idx];
+      const starred = section.starred[idx];
+
       const row = document.createElement('div');
       row.className = 'question-row';
 
@@ -542,15 +582,26 @@
       main.appendChild(choices);
       row.appendChild(main);
 
-      if (!isAnswerMode) {
-        const side = document.createElement('div');
-        if (gradingStarted && response === answer && answer !== null) {
-          side.className = 'check-icon';
-          side.textContent = '✓';
-        }
-        row.appendChild(side);
+      const side = document.createElement('div');
+      side.className = 'question-actions';
+
+      const starBtn = document.createElement('button');
+      starBtn.type = 'button';
+      starBtn.className = `star-btn${starred ? ' active' : ''}`;
+      starBtn.textContent = starred ? '★' : '☆';
+      starBtn.title = starred ? '체크 해제' : '체크';
+      starBtn.setAttribute('aria-label', starred ? '문항 체크 해제' : '문항 체크');
+      starBtn.addEventListener('click', () => toggleStar(section.id, idx));
+      side.appendChild(starBtn);
+
+      if (!isAnswerMode && gradingStarted && response === answer && answer !== null) {
+        const check = document.createElement('div');
+        check.className = 'check-icon';
+        check.textContent = '✓';
+        side.appendChild(check);
       }
 
+      row.appendChild(side);
       return row;
     }
 
@@ -565,7 +616,7 @@
         input.addEventListener('input', e => {
           const id = Number(e.target.dataset.id);
           const field = e.target.dataset.field;
-          const value = field === 'count' ? e.target.value : e.target.value;
+          const value = e.target.value;
           sectionDrafts = sectionDrafts.map(draft => draft.id === id ? { ...draft, [field]: value } : draft);
         });
       });
